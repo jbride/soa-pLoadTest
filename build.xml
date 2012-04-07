@@ -1,0 +1,132 @@
+<project name="soa-pLoadTest" default="deployESB" basedir=".">
+
+    <property environment="ENV"/>
+    <property file="build.properties" />
+    <import file="${spp.home}/base-build.xml" />
+
+    <!-- ********************           oneWay_JMS_LoadTest         ************************************************************
+        - instantiates configurable # of JMS clients that put load on a remote ESB service exposed by a JMS gateway
+        - note that the target ESB service is configured as 'one-way'
+        - the last action in the service transforms the ESB-aware message to a JMS message and publishes the JMS message to a topic
+        - the outbound JMS message includes a String property of 'ID'
+        - the appropriate remote client subsequently consumes the JMS message from the topic via use of a message selector of 'ID='
+        - please modify the arguments passed to the JMSInvokerLoadTest client, as listed in the below target
+        - in addition, please modify the "hornetq.naming.provider.url" parameter found in:  src/test/resources/jndi.properties
+            - this property file assists the client locate the JNDI server that hosts the JMS Connection Factory used to publish JMS messages to the ESB
+    -->
+    <target name="jmsTest" depends="testPrepEsb" description="instantiates configurable # of JMS clients that put load on a remote ESB service exposed by a JMS gateway">
+        <java fork="yes" classname="org.jboss.JMSInvokerLoadTest" failonerror="true">
+            <jvmarg value="-Xms16m" />
+            <jvmarg value="-Xmx64m" />
+            <jvmarg value="-Xss128k" /> 
+            <jvmarg value="-Dorg.jboss.clientCount=${org.jboss.clientCount}"/>            <!-- # of concurrent clients -->
+            <jvmarg value="-Dorg.jboss.messagesPerClient=${org.jboss.messagesPerClient}"/><!-- # of messages pushed per client -->
+            <jvmarg value="-Dorg.jboss.isPersistent=${org.jboss.isPersistent}"/>          <!-- is message Persistent -->
+            <jvmarg value="-Dorg.jboss.messageSize=${org.jboss.messageSize}"/>            <!-- size (bytes) of message body to sent to JMS provider -->
+            <jvmarg value="-Dorg.jboss.connectionFactoryName=${connectionFactory}"/>   <!-- JNDI name of JMS ConnectionFactory -->
+            <jvmarg value="-Dorg.jboss.gatewayDestinationName=${org.jboss.gatewayDestinationName}"/><!-- gateway destination to send initial message to -->
+            <jvmarg value="-Dorg.jboss.forwardDestination=${org.jboss.forwardDestination}"/><!-- reply destination to listen for response message -->
+            <jvmarg value="-Dorg.jboss.finalMessageDestination=${org.jboss.finalMessageDestination}"/>    <!-- reply destination to listen for response message -->
+            <jvmarg value="-Dorg.jboss.sleepTimeMillis=${org.jboss.sleepTimeMillis}" />   <!-- sleep time (millis) between delivery of each message -->
+            <jvmarg value="-Dorg.jboss.logTrnxResult=${org.jboss.logTrnxResult}" />       <!-- whether to log the duration time of each transaction -->
+            <jvmarg value="-Dorg.jboss.blockForTrnxResponse=${org.jboss.blockForTrnxResponse}" /> <!-- whether to block on receive call of every trnx before sending another message -->
+            <sysproperty key="log4j.configuration" value="file:src/test/resources/log4j.xml" />
+            <classpath refid="test.classpath"/>
+        </java>
+    </target>
+
+    <target name="httpTest" depends="httpTestPrep" description="generates http load ">
+        <java fork="yes" classname="org.jboss.HttpClientTest" failonerror="true">
+            <jvmarg value="-Xms16m" />
+            <jvmarg value="-Xmx512m" />
+            <jvmarg value="-Xss128k" /> 
+            <jvmarg value="-Dorg.jboss.clientCount=${org.jboss.clientCount}"/> 
+            <jvmarg value="-Dorg.jboss.messagesPerClient=${org.jboss.messagesPerClient}"/>
+            <jvmarg value="-Dorg.jboss.sleepTimeMillis=${org.jboss.sleepTimeMillis}" />
+            <jvmarg value="-Dorg.jboss.rampUpInterval=${org.jboss.rampUpInterval}" />
+            <jvmarg value="-Dorg.jboss.logTrnxResult=${org.jboss.logTrnxResult}" />
+            <jvmarg value="-Dorg.jboss.httpTest.httpdSocketAddress=${org.jboss.httpTest.httpdSocketAddress}" />
+            <sysproperty key="log4j.configuration" value="file:src/test/resources/log4j.xml" />
+            <classpath refid="http.classpath"/>
+        </java>
+    </target>
+
+    <property name="build.dir" value="target" />
+    <property name="runtime.lib.dir"    value="${jboss.home}/server/${jboss.server.configuration}/lib/${organization.name}" />
+    <property name="jboss.server.deploy.dir"    value="${jboss.home}/server/${jboss.server.configuration}/deploy" />
+
+    <target name="testPrepEsb" depends="init" >
+        <delete dir="${build.dir}" />
+        <mkdir dir="${build.dir}" />
+        <javac debug="true" srcdir="src/test/java" destdir="${build.dir}" optimize="${javac.optimize}" >
+            <classpath refid="test.classpath" />
+        </javac>
+        <antcall target="filter">
+            <param name="source.dir" value="src/test/resources"/>
+            <param name="file.name" value="jndi.properties"/>
+            <param name="dest.dir" value="${build.dir}"/>
+        </antcall>
+    </target>
+
+    <target name="hornetQtestPrep" depends="init" >
+        <javac debug="true" srcdir="test/src/hornetq" destdir="test/build" optimize="${javac.optimize}" >
+            <classpath refid="test.classpath" />
+        </javac>
+    </target>
+    <target name="httpTestPrep" depends="init,setClasspath" >
+        <delete dir="${build.dir}" />
+        <mkdir dir="${build.dir}" />
+        <javac debug="true" srcdir="src/test/java" destdir="${build.dir}" optimize="${javac.optimize}" >
+            <classpath refid="http.classpath" />
+        </javac>
+    </target>
+
+    <target name="deployJAXRS" >
+        <antcall target="init" />
+        <copy toDir="${runtime.lib.dir}" overwrite="true" verbose="true" >
+            <fileset dir="lib/jaxrs" />
+        </copy>
+
+        <copy toDir="${build.dir}/WEB-INF" overwrite="true" verbose="true" >
+            <fileset dir="src/main/resources/webapp" />
+        </copy>
+        <copy toDir="${jboss.server.deploy.dir}/${organization.name}/soa-pLoadTest.war" overwrite="true" verbose="true" >
+            <fileset dir="${build.dir}/" />
+        </copy>
+    </target>
+
+    <target name="deployESB" depends="deployJAXRS,setClasspath" description="" >
+        <antcall target="init" />
+        <javac debug="true" srcdir="src/main/java" destdir="${build.dir}" optimize="${javac.optimize}" >
+            <classpath refid="http.classpath" />
+        </javac>
+        <antcall target="filter">
+            <param name="source.dir" value="src/main/resources/META-INF"/>
+            <param name="dest.dir" value="${build.dir}/META-INF"/>
+        </antcall>
+        <copy toDir="${jboss.server.deploy.dir}/${organization.name}/soa-pLoadTest.esb" overwrite="true" verbose="true" >
+            <fileset dir="${build.dir}" />
+        </copy>
+    </target>
+
+    <target name="init" >
+        <delete dir="${build.dir}" />
+        <mkdir dir="${build.dir}" />
+    </target>
+    <condition property="useHornetq" >
+        <contains string="${messaging.provider}" substring="hornetq"/>
+    </condition>
+    <condition property="useQpid" >
+        <contains string="${messaging.provider}" substring="qpid"/>
+    </condition>
+
+    <path id="http.classpath">
+        <path refid="base.classpath" />
+        <pathelement location="${build.dir}"/>
+        <fileset dir="lib/httpComponents" />
+        <fileset dir="${jboss.home}/client">
+            <include name="commons-logging.jar" />
+        </fileset>
+    </path>
+
+</project>
