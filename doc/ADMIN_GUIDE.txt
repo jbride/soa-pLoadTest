@@ -2,54 +2,28 @@ soa-pLoadTest
 
 JA Bride
 
-PURPOSE :  
- -- execute configurable # of clients placing requests on a SOA-P service
- -- support load testing of both HTTP/REST and Hornetq transports
-
 
 USAGE    :
     -- pre-requisites
-        1)  ensure Red Hat/JBoss SOA-P are installed on this machine
+        1)  ensure Red Hat/JBoss SOA-P are installed on this machine as per:  https://github.com/jbride/soa-pProvision
         2)  ensure the $JBOSS_HOME environment variable is set correctly in this operating system shell
-        3)  start Red Hat/JBoss SOA-P
-        4)  start JMS messaging provider
+        3)  start JMS messaging provider
             -- if testing against embedded JBoss Messaging, then this step can be skipped
             -- if testing against stand-alone HornetQ or Apache QPid C broker, start the provider now
-        5)  ensure that Apache Ant is installed on this machine and that the 'ant' executable is included in the $PATH environment variable
 
-    -- deployment of 'concurrentClient_loadTest.esb' to remote JBoss node
-        1)  edit the $JBOSS_HOME, 'server.name' at the top of this project's 'build.xml 
-        2)  edit the 'messaging.provider', 'hornetq.naming.provider.url' and 'connectionFactory' properties at the top of this project's 'build.xml'
-        3)  if testing against HornetQ, modify the value of the 'HORNETQ_HOME' property in the 'build.xml'
-        4)  if testing against QPid, modify the value of the 'QPID_JAVA_HOME' property in the 'build.xml'
+        4)  review this project's build.properties
         5)  execute :   'ant'
+            -- deploys RESTeasy libraries and configs to SOA-P runtime lib directory
+            -- deploy soa-pLoadTest.esb to SOA-P runtime
 
+        6)  start Red Hat/JBoss SOA-P
 
-    -- execution of the load test at the command line :
-        1)  view listing of possible load test scenarios :   ant -p
-        2)  if desired test is 'oneWay_JMS_LoadTest'
-            -- view the 'oneWay_JMS_LoadTest' target in this project's 'build.xml' 
-            -- modify any of the jvm arguments passed to the JMSInvokerLoadTest
-            -- execute the load test:   ant oneWay_JMS_LoadTest
+        7)  execute:    
+                        ant httpTest  (if sending requests to ESB service via HTTP)
+                            or
+                        ant jmsTest  (if sending requests to ESB service via JMS)
+
 
     -- Expected Results:
         -- If a run of the tests above are successful, the output messages will follow the pattern illustrated in the example below.
         -- Notice that at the end of each line, the value of the subscriberId matches the value of the replyMessage.
-        -- This indicates that the message response was sent to the proper client invoker:
-
-[java] 06:15:41,008 INFO  [Thread-6][JMSInvokerLoadTest] COMPLETE!!  messageCount = 9  :       subscriberId = 6        :       replyMessage = 6
-[java] 06:15:41,019 INFO  [Thread-12][JMSInvokerLoadTest] COMPLETE!!  messageCount = 9 :       subscriberId = 12       :       replyMessage = 12
-[java] 06:15:41,024 INFO  [Thread-10][JMSInvokerLoadTest] COMPLETE!!  messageCount = 9 :       subscriberId = 10       :       replyMessage = 10
-[java] 06:15:41,029 INFO  [Thread-46][JMSInvokerLoadTest] COMPLETE!!  messageCount = 9 :       subscriberId = 46       :       replyMessage = 46
-
-Considerations for 'fire-n-forget' scenario
-    -- batch producer message deliveries in a single trnx
-    -- duplicateId detection in provider
-        -- set 'HDR_DUPLICATE_DETECTION' guid on message sent to provider by concurrentClient_LoadTest
-        -- in ForwardJMSMessage action (in esb service), continue to use the same HDR_DUPLICATE_DETECTION guid (since each JMS address maintains its own distinct cache
-        -- in hornetq-configuration.xml, set 'id-cache-size' to ???? (default is 2k ids)
-        -- possibly use 'batch-delay' config setting on connection factory for producers ???
-    -- jms-providers in ESB should all use a JMS acknowledge mode of 'DUPLICATES_OK'
-    -- modify the 'dups-ok-batch-size' in the connection factory used by the jms-providers in the ESB 
-
-Considerations for 'request-reply' scenario
