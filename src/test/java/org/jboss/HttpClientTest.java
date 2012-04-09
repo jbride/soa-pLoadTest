@@ -2,7 +2,6 @@ package org.jboss;
 
 import java.util.Iterator;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.concurrent.Executor;

@@ -14,7 +14,7 @@
         - in addition, please modify the "hornetq.naming.provider.url" parameter found in:  src/test/resources/jndi.properties
             - this property file assists the client locate the JNDI server that hosts the JMS Connection Factory used to publish JMS messages to the ESB
     -->
-    <target name="jmsTest" depends="testPrepEsb" description="instantiates configurable # of JMS clients that put load on a remote ESB service exposed by a JMS gateway">
+    <target name="jmsTest" depends="jmsTestPrep" description="instantiates configurable # of JMS clients that put load on a remote ESB service exposed by a JMS gateway">
         <java fork="yes" classname="org.jboss.JMSInvokerLoadTest" failonerror="true">
             <jvmarg value="-Xms16m" />
             <jvmarg value="-Xmx64m" />
@@ -31,7 +31,7 @@
             <jvmarg value="-Dorg.jboss.logTrnxResult=${org.jboss.logTrnxResult}" />       <!-- whether to log the duration time of each transaction -->
             <jvmarg value="-Dorg.jboss.blockForTrnxResponse=${org.jboss.blockForTrnxResponse}" /> <!-- whether to block on receive call of every trnx before sending another message -->
             <sysproperty key="log4j.configuration" value="file:src/test/resources/log4j.xml" />
-            <classpath refid="test.classpath"/>
+            <classpath refid="client.classpath"/>
         </java>
     </target>
 
@@ -55,11 +55,11 @@
     <property name="runtime.lib.dir"    value="${jboss.home}/server/${jboss.server.configuration}/lib/${organization.name}" />
     <property name="jboss.server.deploy.dir"    value="${jboss.home}/server/${jboss.server.configuration}/deploy" />
 
-    <target name="testPrepEsb" depends="init" >
+    <target name="jmsTestPrep" depends="init,setClasspath" >
         <delete dir="${build.dir}" />
         <mkdir dir="${build.dir}" />
         <javac debug="true" srcdir="src/test/java" destdir="${build.dir}" optimize="${javac.optimize}" >
-            <classpath refid="test.classpath" />
+            <classpath refid="client.classpath" />
         </javac>
         <antcall target="filter">
             <param name="source.dir" value="src/test/resources"/>
@@ -68,16 +68,11 @@
         </antcall>
     </target>
 
-    <target name="hornetQtestPrep" depends="init" >
-        <javac debug="true" srcdir="test/src/hornetq" destdir="test/build" optimize="${javac.optimize}" >
-            <classpath refid="test.classpath" />
-        </javac>
-    </target>
     <target name="httpTestPrep" depends="init,setClasspath" >
         <delete dir="${build.dir}" />
         <mkdir dir="${build.dir}" />
         <javac debug="true" srcdir="src/test/java" destdir="${build.dir}" optimize="${javac.optimize}" >
-            <classpath refid="http.classpath" />
+            <classpath refid="client.classpath" />
         </javac>
     </target>
 
@@ -97,8 +92,12 @@
 
     <target name="deployESB" depends="deployJAXRS,setClasspath" description="" >
         <antcall target="init" />
+        <path id="services.classpath">
+            <path refid="base.classpath" />
+            <fileset dir="lib/jaxrs" />
+        </path>
         <javac debug="true" srcdir="src/main/java" destdir="${build.dir}" optimize="${javac.optimize}" >
-            <classpath refid="http.classpath" />
+            <classpath refid="services.classpath" />
         </javac>
         <antcall target="filter">
             <param name="source.dir" value="src/main/resources/META-INF"/>
@@ -120,13 +119,10 @@
         <contains string="${messaging.provider}" substring="qpid"/>
     </condition>
 
-    <path id="http.classpath">
+    <path id="client.classpath">
         <path refid="base.classpath" />
         <pathelement location="${build.dir}"/>
         <fileset dir="lib/httpComponents" />
-        <fileset dir="${jboss.home}/client">
-            <include name="commons-logging.jar" />
-        </fileset>
     </path>
 
 </project>
