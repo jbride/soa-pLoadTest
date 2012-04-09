@@ -216,7 +216,7 @@ public class JMSInvokerLoadTest {
 
                     // block on receive() method if configured to do so for every trnx
                     if(blockForTrnxResponse) {
-                        Message replyMessage = (Message)m_consumer.receive(20000); //blocks for max 20 seconds
+                        Message replyMessage = (Message)m_consumer.receive(60000); //blocks for max 60 seconds
                         if(replyMessage != null) {
                             if(logTrnxResult) {
                                 long duration = System.currentTimeMillis() - originalTime;

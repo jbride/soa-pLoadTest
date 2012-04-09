@@ -12,12 +12,9 @@
         <property name="max-xa-sessions-per-connection" value="1" />
                       
     <!--    *********** oneWay load test providers    ****************** -->
-              <jms-bus busid="testQueue.gw">
-                  <jms-message-filter dest-type="QUEUE" dest-name="queue/testQueue.gw" persistent="false" acknowledge-mode="AUTO_ACKNOWLEDGE"/>
-              </jms-bus>
-              <jms-bus busid="testQueue">
-                  <jms-message-filter dest-type="QUEUE" dest-name="queue/testQueue" persistent="true" transacted="true" />
-              </jms-bus>
+          <jms-bus busid="testQueue.gw">
+              <jms-message-filter dest-type="QUEUE" dest-name="${org.jboss.gatewayDestinationName}" persistent="true" transacted="false" acknowledge-mode="AUTO_ACKNOWLEDGE"/>
+          </jms-bus>
        </jms-provider>
 
         <!-- NOTE:  no need for 'transacted' or 'acknowledge-mode' configs because both are ignored by a session controlled by JTA -->
@@ -41,6 +38,7 @@
       <service 
             category="loadTest" 
             name="oneWay_LoadTest" 
+            invmScope="GLOBAL"
             description="oneWay concurrentUser_loadTest">
             <listeners>
                 <jms-listener name="JMS-Gateway" busidref="testQueue.gw" is-gateway="true" >
@@ -49,13 +47,15 @@
                     <property name="SERVICE_NAME" value="faultTo_service"/>
                     <property name="SET_TIMESTAMP" value="TRUE"/>
                 </jms-listener>
-                <jms-listener name="testQueue" busidref="testQueue" maxThreads="25" />
             </listeners>
             <actions mep="OneWay">
                 <action name="addNodeId" class="org.jboss.PrintMessageStuff" process="addNodeId" />
+                <action name="introduceDelay" class="org.jboss.IntroduceDelay" process="process" >
+                    <property name="DELAY_MILLIS" value="${org.jboss.server.side.delay.millis}" />
+                </action>
                 <action name="forwardAction" class="org.jboss.ForwardJMSMessage">
-                    <property name="forwardDestination" value="topic/testTopic.gw"/>
-                    <property name="completionDestination" value="queue/controlQueue"/>
+                    <property name="forwardDestination" value="${org.jboss.forwardDestination}"/>
+                    <property name="completionDestination" value="${org.jboss.finalMessageDestination}"/>
                     <property name="connectionFactoryName" value="${connectionFactory}"/>
                     <property name="hornetq.naming.provider.url" value="${hornetq.naming.provider.url}"/>
                     <property name="isMessagePersistent" value="true"/>
@@ -67,6 +67,7 @@
       <service 
             category="loadTest" 
             name="transacted_LoadTest" 
+            invmScope="GLOBAL"
             description="transacted_oneWay concurrentUser_loadTest">
             <listeners>
                 <jms-listener name="transacted_gwChannel" busidref="exampleChannel" is-gateway="true" >
@@ -77,16 +78,15 @@
                     <property name="SERVICE_NAME" value="faultTo_service"/>
                     <property name="SET_TIMESTAMP" value="TRUE"/>
                 </jms-listener>
-                <jms-listener name="transacted_esbChannel" busidref="expiryChannel" maxThreads="25" >
-                    <property name="jcaActivationMapper" value="org.jboss.soa.esb.listeners.jca.HornetQActivationMapper"/>
-                    <property name="adapter" value="hornetq-ra.rar"/>
-                </jms-listener>
             </listeners>
             <actions mep="OneWay">
                 <action name="addNodeId" class="org.jboss.PrintMessageStuff" process="addNodeId" />
+                <action name="introduceDelay" class="org.jboss.IntroduceDelay" process="process" >
+                    <property name="DELAY_MILLIS" value="${org.jboss.server.side.delay.millis}" />
+                </action>
                 <action name="forwardAction" class="org.jboss.ForwardJMSMessage">
-                    <property name="forwardDestination" value="topic/testTopic.gw"/>
-                    <property name="completionDestination" value="queue/controlQueue"/>
+                    <property name="forwardDestination" value="${org.jboss.forwardDestination}"/>
+                    <property name="completionDestination" value="${org.jboss.finalMessageDestination}"/>
                     <property name="connectionFactoryName" value="${connectionFactory}"/>
                     <property name="hornetq.naming.provider.url" value="${hornetq.naming.provider.url}"/>
                     <property name="isMessagePersistent" value="true"/>
@@ -100,7 +100,7 @@
             <actions mep="RequestResponse">
                 <action name="addNodeId" class="org.jboss.PrintMessageStuff" process="addNodeId" />
                 <action name="introduceDelay" class="org.jboss.IntroduceDelay" process="process" >
-                    <property name="DELAY_MILLIS" value="1000"/>
+                    <property name="DELAY_MILLIS" value="${org.jboss.server.side.delay.millis}" />
                 </action>
             </actions>
         </service>

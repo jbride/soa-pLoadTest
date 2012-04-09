@@ -4,6 +4,7 @@ import org.jboss.soa.esb.actions.AbstractActionLifecycle;
 import org.jboss.soa.esb.helpers.ConfigTree;
 import org.jboss.soa.esb.message.Message;
 import org.jboss.soa.esb.actions.ActionLifecycleException;
+import org.jboss.soa.esb.ConfigurationException;
 
 import org.apache.log4j.Logger;
 
@@ -15,9 +16,9 @@ public class IntroduceDelay extends AbstractActionLifecycle {
     
     protected ConfigTree _config;
 	  
-    public IntroduceDelay(ConfigTree config) { 
+    public IntroduceDelay(ConfigTree config) throws ConfigurationException{ 
         _config = config; 
-        delayMillis = Integer.parseInt(_config.getAttribute(DELAY_MILLIS));
+        delayMillis = Integer.parseInt(_config.getRequiredAttribute(DELAY_MILLIS));
     } 
   
     public Message process(Message message) throws ActionLifecycleException {
