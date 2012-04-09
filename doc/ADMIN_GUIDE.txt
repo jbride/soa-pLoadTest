@@ -24,6 +24,4 @@ USAGE    :
                         ant jmsTest  (if sending requests to ESB service via JMS)
 
 
-    -- Expected Results:
-        -- If a run of the tests above are successful, the output messages will follow the pattern illustrated in the example below.
-        -- Notice that at the end of each line, the value of the subscriberId matches the value of the replyMessage.
+    -- Expected Results:  (To-Do)
